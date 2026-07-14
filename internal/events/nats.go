@@ -125,9 +125,6 @@ func (b *natsBus) consumeLoop(ctx context.Context, cons jetstream.Consumer, hand
 				continue
 			}
 			_ = m.Ack()
-			if err := msgs.Error(); err != nil {
-				return
-			}
 		}
 	}
 }
