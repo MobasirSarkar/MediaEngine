@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+*.log
+*.err
+*.out
+bin/
+tmp/
+dist/
+.idea/
+.vscode/
+*.test
+coverage.out
+.codebase-memory/
+graph.db
+.graphify/
+*.exe

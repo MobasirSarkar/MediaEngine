@@ -1,0 +1,30 @@
+app:
+  env: dev
+  http_addr: :8080
+
+log:
+  level: debug
+  format: console
+
+db:
+  dsn: postgres://pipeline:pipeline@localhost:5432/pipeline?sslmode=disable
+  max_open: 20
+  max_idle: 5
+
+nats:
+  url: nats://localhost:4222
+  stream: pipeline
+
+s3:
+  endpoint: http://localhost:9000
+  region: us-east-1
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket_uploads: uploads
+  bucket_media: media
+  presign_ttl: 15m
+
+uploads:
+  chunk_size_min: 5242880
+  chunk_size_max: 52428800
+  session_ttl: 24h

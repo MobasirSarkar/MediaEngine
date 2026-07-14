@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Media Pipeline Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #080d1a;
+            --card-bg: #111827;
+            --card-bg-2: #0f172a;
+            --border: #1e2d45;
+            --border-hover: #2d4263;
+            --primary: #4f46e5;
+            --accent: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f1f5f9;
+            --text-sub: #64748b;
+            --text-muted: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: radial-gradient(ellipse 80% 60% at 50% -10%, #1a1040 0%, var(--bg-dark) 70%);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2.5rem 1.5rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 60%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.03em;
+        }
+
+        header p { color: var(--text-sub); font-size: 1rem; }
+
+        .container {
+            width: 100%;
+            max-width: 920px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover { border-color: var(--border-hover); }
+
+        .card.uploading-glow {
+            border-color: rgba(99,102,241,0.45);
+            box-shadow: 0 0 0 1px rgba(99,102,241,0.15), 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        /* Drop zone */
+        .upload-zone {
+            border: 2px dashed var(--border-hover);
+            border-radius: 10px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: rgba(255,255,255,0.015);
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            border-color: rgba(99,102,241,0.5);
+            background: rgba(99,102,241,0.04);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(79,70,229,0.08);
+            transform: scale(0.992);
+        }
+
+        .upload-icon {
+            font-size: 2.75rem;
+            margin-bottom: 1.25rem;
+            display: inline-block;
+            animation: bounce 2.5s ease-in-out infinite;
+        }
+
+        .upload-zone p { font-size: 1.05rem; color: var(--text); margin-bottom: 0.4rem; font-weight: 500; }
+        .upload-zone > span { font-size: 0.875rem; color: var(--text-sub); }
+        #file-input { display: none; }
+
+        /* File info row */
+        .file-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.9rem 1.2rem;
+            margin-top: 1.25rem;
+            animation: fadeIn 0.3s ease-out;
+            gap: 1rem;
+        }
+
+        .file-details { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+        .file-name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-size { font-size: 0.82rem; color: var(--text-sub); }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.65rem 1.35rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn:hover { background: #4338ca; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.4); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { background: #1e2d45; color: var(--text-sub); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Resume banner */
+        #resume-banner {
+            background: rgba(59,130,246,0.07);
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Progress Panel */
+        .progress-panel {
+            display: none;
+            margin-top: 1.5rem;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.88rem;
+            margin-bottom: 0.65rem;
+            color: var(--text-sub);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #818cf8, #a78bfa, #818cf8, #4f46e5);
+            background-size: 300% 100%;
+            border-radius: 99px;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: shimmer 2.5s linear infinite;
+        }
+
+        @keyframes shimmer { 0% { background-position: 100% center; } 100% { background-position: -100% center; } }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.28rem 0.75rem;
+            border-radius: 99px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.uploading {
+            background: rgba(99,102,241,0.12);
+            color: #a5b4fc;
+            border: 1px solid rgba(99,102,241,0.3);
+        }
+
+        .status-badge.success {
+            background: rgba(16,185,129,0.12);
+            color: #34d399;
+            border: 1px solid rgba(16,185,129,0.3);
+            animation: pulseGreen 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseGreen {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+            50% { box-shadow: 0 0 0 5px rgba(16,185,129,0.12); }
+        }
+
+        /* Upload success card */
+        #upload-success {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(16,185,129,0.3);
+            background: rgba(16,185,129,0.06);
+            animation: fadeIn 0.5s ease-out;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .success-msg { display: flex; align-items: center; gap: 0.875rem; }
+        .success-icon-lg { font-size: 2rem; }
+        .success-title { font-weight: 700; color: #34d399; font-size: 1rem; }
+        .success-sub { font-size: 0.8rem; color: var(--text-sub); margin-top: 0.15rem; }
+
+        .btn-ghost {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-hover);
+            color: var(--text);
+            padding: 0.55rem 1.1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-ghost:hover { background: rgba(255,255,255,0.09); transform: none; box-shadow: none; }
+
+        /* Live Dashboard */
+        .dashboard-panel { display: none; animation: fadeIn 0.5s ease-out; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) { .dashboard-grid { grid-template-columns: 1fr 1fr; } }
+
+        .task-list { display: flex; flex-direction: column; gap: 0.875rem; }
+
+        .task-card {
+            background: var(--card-bg-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .task-card.active { border-color: rgba(99,102,241,0.45); background: rgba(79,70,229,0.06); }
+        .task-card.completed { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.05); }
+
+        .task-info { display: flex; align-items: center; gap: 0.875rem; }
+        .task-icon { font-size: 1.4rem; }
+        .task-title { font-weight: 600; font-size: 0.95rem; }
+        .task-status-text { font-size: 0.82rem; color: var(--text-sub); margin-top: 0.1rem; }
+
+        /* Spinner */
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.08); border-radius: 50%; border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+        .success-icon { color: var(--success); font-weight: bold; font-size: 1.15rem; }
+        .pending-icon { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* Results Panel */
+        .results-panel { grid-column: 1 / -1; background: var(--card-bg-2); border-radius: 10px; padding: 1.5rem; border: 1px solid var(--border); }
+
+        .results-title { font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: #38bdf8; font-size: 0.9rem; }
+
+        .json-viewer {
+            background: #020617;
+            border-radius: 8px;
+            padding: 1.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #94a3b8;
+            overflow-x: auto;
+            max-height: 280px;
+            border: 1px solid var(--border);
+        }
+
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes bounce  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+
+
+</head>
+<body>
+
+    <header>
+        <h1>Media Processing Pipeline</h1>
+        <p>Enterprise chunked S3 uploads with real-time background task processing</p>
+    </header>
+
+    <div class="container">
+        <!-- Main Upload Card -->
+        <div class="card" id="upload-card">
+            <!-- Resume Banner -->
+            <div id="resume-banner">
+                <div style="flex-grow:1">
+                    <span style="font-weight:600;color:#60a5fa;font-size:0.9rem;display:flex;align-items:center;gap:0.5rem;"><span>⚠️</span> Unfinished Upload Session Found</span>
+                    <p style="font-size:0.8rem;color:var(--text-sub);margin-top:0.2rem;line-height:1.4;">Incomplete upload for "<span id="resume-banner-filename" style="color:var(--text);font-weight:500;"></span>". Re-select that file to resume, or discard it.</p>
+                </div>
+                <button class="btn" id="discard-session-btn" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;font-size:0.82rem;padding:0.45rem 1rem;">Discard</button>
+            </div>
+
+            <div class="upload-zone" id="drop-zone">
+                <span class="upload-icon">🚀</span>
+                <p>Drag &amp; drop file here, or click to browse</p>
+                <span>Supports any file size · Parallel chunked uploads</span>
+                <input type="file" id="file-input">
+            </div>
+
+            <div id="file-display" style="display:none;">
+                <div class="file-info">
+                    <div class="file-details">
+                        <span class="file-name" id="selected-file-name">file_name.mp4</span>
+                        <span class="file-size" id="selected-file-size">124.5 MB</span>
+                    </div>
+                    <div id="upload-action-box" style="display:flex;gap:0.5rem;">
+                        <button class="btn" id="upload-btn">Start Upload</button>
+                        <button class="btn" id="resume-session-btn" style="display:none;background:var(--accent);">Resume Upload</button>
+                        <button class="btn" id="start-fresh-btn" style="display:none;background:rgba(255,255,255,0.06);border:1px solid var(--border-hover);color:var(--text);">Start Fresh</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Success State -->
+            <div id="upload-success">
+                <div class="success-msg">
+                    <span class="success-icon-lg">✅</span>
+                    <div>
+                        <div class="success-title">Upload Complete!</div>
+                        <div class="success-sub" id="success-sub-text">File uploaded — pipeline processing started.</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost" id="new-upload-btn">+ New Upload</button>
+            </div>
+
+            <!-- Upload Progress -->
+            <div class="progress-panel" id="progress-panel">
+                <div class="progress-header">
+                    <span class="status-badge uploading" id="upload-badge">Uploading</span>
+                    <span id="progress-text" style="font-size:0.85rem;">0 / 0 chunks (0%)</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progress-bar"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;gap:0.5rem;">
+                    <div id="chunk-list-status" style="font-size:0.82rem;color:var(--text-sub);flex-grow:1;">Initializing...</div>
+                    <button class="btn" id="retry-btn" style="display:none;padding:0.45rem 1rem;font-size:0.82rem;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fcd34d;">Retry</button>
+                    <button class="btn" id="cancel-btn" style="display:none;padding:0.45rem 1rem;font-size:0.82rem;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;">Pause</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Background Job Dashboard -->
+        <div class="card dashboard-panel" id="dashboard-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 600;">Job Processing Monitor</h2>
+                <span class="status-badge uploading" id="job-status-badge">Queued</span>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Task list status -->
+                <div class="task-list">
+                    <div class="task-card" id="task-metadata">
+                        <div class="task-info">
+                            <span class="task-icon">📊</span>
+                            <div>
+                                <div class="task-title">Metadata Extraction</div>
+                                <div class="task-status-text" id="task-status-metadata">Waiting...</div>
+                            </div>
+                        </div>
+                        <div class="task-indicator" id="task-indicator-metadata">
+                            <span class="pending-icon">⏳</span>
+                        </div>
+                    </div>
+
+                    <div class="task-card" id="task-thumbnail">
+                        <div class="task-info">
+                            <span class="task-icon">🖼️</span>
+                            <div>
+                                <div class="task-title">Thumbnail Generation</div>
+                                <div class="task-status-text" id="task-status-thumbnail">Waiting...</div>
+                            </div>
+                        </div>
+                        <div class="task-indicator" id="task-indicator-thumbnail">
+                            <span class="pending-icon">⏳</span>
+                        </div>
+                    </div>
+
+                    <div class="task-card" id="task-transcode">
+                        <div class="task-info">
+                            <span class="task-icon">🎬</span>
+                            <div>
+                                <div class="task-title">Video Transcoding</div>
+                                <div class="task-status-text" id="task-status-transcode">Waiting...</div>
+                            </div>
+                        </div>
+                        <div class="task-indicator" id="task-indicator-transcode">
+                            <span class="pending-icon">⏳</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Output Card -->
+                <div class="results-panel">
+                    <div class="results-title">
+                        <span>🔍</span> Task Results
+                    </div>
+                    <div class="json-viewer" id="json-viewer">Processing results will appear here...</div>
+                </div>
+
+                <!-- Media Output Showcase -->
+                <div class="results-panel" id="showcase-panel" style="display: none; border-color: var(--success);">
+                    <div class="results-title" style="color: #34d399;">
+                        <span>🎬</span> Media Output Showcase
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1rem;">
+                        <div id="thumbnail-preview-box" style="display: none; text-align: center;">
+                            <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-sub);">Extracted Thumbnail</h4>
+                            <img id="preview-img" src="" alt="Thumbnail" style="max-width: 100%; max-height: 200px; border-radius: 6px; border: 1px solid #334155;">
+                        </div>
+                        <div id="video-preview-box" style="display: none; text-align: center;">
+                            <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-sub);">Transcoded Video (5s preview)</h4>
+                            <video id="preview-video" controls style="max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid #334155;">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileDisplay = document.getElementById('file-display');
+        const selectedFileName = document.getElementById('selected-file-name');
+        const selectedFileSize = document.getElementById('selected-file-size');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadCard = document.getElementById('upload-card');
+        const progressPanel = document.getElementById('progress-panel');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const chunkListStatus = document.getElementById('chunk-list-status');
+        const uploadBadge = document.getElementById('upload-badge');
+        const retryBtn = document.getElementById('retry-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const resumeBanner = document.getElementById('resume-banner');
+        const resumeBannerFilename = document.getElementById('resume-banner-filename');
+        const discardSessionBtn = document.getElementById('discard-session-btn');
+        const resumeSessionBtn = document.getElementById('resume-session-btn');
+        const startFreshBtn = document.getElementById('start-fresh-btn');
+        const dashboardPanel = document.getElementById('dashboard-panel');
+        const jobStatusBadge = document.getElementById('job-status-badge');
+        const jsonViewer = document.getElementById('json-viewer');
+
+        let isCancelled = false;
+        
+        // ── Upload Another / New Upload button ─────────────────────────────────
+        const uploadSuccessEl = document.getElementById('upload-success');
+        const successSubText  = document.getElementById('success-sub-text');
+        const newUploadBtn    = document.getElementById('new-upload-btn');
+
+        newUploadBtn.addEventListener('click', () => {
+            uploadSuccessEl.style.display = 'none';
+            progressPanel.style.display   = 'none';
+            dropZone.style.display        = 'block';
+            uploadCard.classList.remove('uploading-glow');
+            uploadBadge.className         = 'status-badge uploading';
+            uploadBadge.textContent       = 'Uploading';
+            progressBar.style.width       = '0%';
+            progressText.textContent      = '0 / 0 chunks (0%)';
+            chunkListStatus.textContent   = 'Initializing...';
+            selectedFile = null;
+            currentUploadId = null;
+            fileInput.value = '';
+        });
+
+        // ── Shared helper: show success state and hide upload UI ──────────────────
+        function showSuccessState(filename) {
+            fileDisplay.style.display     = 'none';
+            progressPanel.style.display   = 'none';
+            dropZone.style.display        = 'none';
+            cancelBtn.style.display       = 'none';
+            uploadSuccessEl.style.display = 'flex';
+            successSubText.textContent    = `"${filename}" uploaded — pipeline processing started.`;
+            uploadCard.classList.remove('uploading-glow');
+        }
+
+        let selectedFile = null;
+        let currentUploadId = null;
+        let currentChunkSize = null;
+        let isUploading = false;
+
+        // ── Adaptive chunk size: scales with file size for fewer round-trips ─────
+        // Min 5MB (S3 limit), scales up to 100MB for huge files.
+        function getChunkSize(fileSize) {
+            const MB = 1024 * 1024;
+            if (fileSize < 100 * MB)  return 5  * MB;  // <100MB  → 5MB  chunks
+            if (fileSize < 500 * MB)  return 10 * MB;  // <500MB  → 10MB chunks
+            if (fileSize < 2048 * MB) return 25 * MB;  // <2GB    → 25MB chunks
+            return 100 * MB;                            //  ≥2GB   → 100MB chunks
+        }
+        const UPLOAD_CONCURRENCY = 6; // parallel chunk uploads in flight at once
+
+        // ── Page-load: check for an incomplete session in localStorage ────────────
+        (function checkExistingSession() {
+            const storedId = localStorage.getItem('pipeline-upload-id');
+            const storedFilename = localStorage.getItem('pipeline-upload-filename');
+            if (storedId && storedFilename) {
+                currentUploadId = storedId;
+                currentChunkSize = parseInt(localStorage.getItem('pipeline-upload-chunksize')) || (5 * 1024 * 1024);
+                resumeBannerFilename.textContent = storedFilename;
+                resumeBanner.style.display = 'flex';
+            }
+        })();
+
+        // ── beforeunload: warn user if an upload is actively in progress ──────────
+        window.addEventListener('beforeunload', (e) => {
+            if (isUploading) {
+                e.preventDefault();
+                e.returnValue = 'You have an active upload in progress. Leaving will pause it — you can resume later by re-selecting the same file.';
+                return e.returnValue;
+            }
+        });
+
+        // Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function handleFileSelect(file) {
+            const storedId = localStorage.getItem('pipeline-upload-id');
+            const storedFilename = localStorage.getItem('pipeline-upload-filename');
+            const storedSize = localStorage.getItem('pipeline-upload-size');
+
+            if (storedId) {
+                // We have an active incomplete session
+                if (file.name === storedFilename && file.size == storedSize) {
+                    selectedFile = file;
+                    selectedFileName.textContent = file.name;
+                    selectedFileSize.textContent = formatBytes(file.size);
+                    fileDisplay.style.display = 'block';
+                    dropZone.style.display = 'none';
+
+                    // Adjust button states to show resume/fresh
+                    uploadBtn.style.display = 'none';
+                    resumeSessionBtn.style.display = 'block';
+                    startFreshBtn.style.display = 'block';
+                } else {
+                    alert(`An unfinished upload session for "${storedFilename}" is active. Please select that file to resume, or click "Discard Session" to discard it first.`);
+                    fileInput.value = '';
+                    fileDisplay.style.display = 'none';
+                    selectedFile = null;
+                }
+            } else {
+                // Standard upload
+                selectedFile = file;
+                selectedFileName.textContent = file.name;
+                selectedFileSize.textContent = formatBytes(file.size);
+                fileDisplay.style.display = 'block';
+                
+                uploadBtn.style.display = 'block';
+                resumeSessionBtn.style.display = 'none';
+                startFreshBtn.style.display = 'none';
+            }
+        }
+
+        // ── Shared helper: parallel chunk upload with concurrency pool ─────────
+        async function doChunkUploads(uploadId, chunk_urls, indices, totalChunks, actualChunkSize) {
+            // indices: array of chunk numbers to upload (all for fresh, missing[] for resume)
+            let completed = totalChunks - indices.length; // already done before this call
+            let cursor = 0; // next index in `indices` to start
+
+            // Update progress bar from the current completed count
+            const updateProgress = () => {
+                const pct = Math.round((completed / totalChunks) * 100);
+                progressBar.style.width = `${pct}%`;
+                progressText.textContent = `${completed} / ${totalChunks} chunks (${pct}%)`;
+                chunkListStatus.textContent = `Uploading — ${UPLOAD_CONCURRENCY} workers in parallel...`;
+            };
+            updateProgress();
+
+            // Upload a single chunk by its index number
+            async function uploadOne(chunkIdx) {
+                if (isCancelled) throw new Error('Upload canceled by user');
+
+                const start = chunkIdx * actualChunkSize;
+                const end   = Math.min(start + actualChunkSize, selectedFile.size);
+                const blob  = selectedFile.slice(start, end);
+
+                // Hash and upload in parallel (hash while previous PUT is in-flight on other workers)
+                const buffer     = await blob.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                const checksum   = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+                const putResp = await fetch(chunk_urls[chunkIdx], {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: blob
+                });
+                if (!putResp.ok) throw new Error(`S3 upload failed on chunk ${chunkIdx}: ${putResp.statusText}`);
+
+                const regResp = await fetch(`/uploads/${uploadId}/chunks/${chunkIdx}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ size: blob.size, checksum })
+                });
+                const regData = await regResp.json();
+                if (!regData.success) throw new Error(regData.error?.message || `Failed to register chunk ${chunkIdx}`);
+
+                completed++;
+                updateProgress();
+            }
+
+            // Worker: keeps pulling next chunk until all are done
+            async function worker() {
+                while (cursor < indices.length) {
+                    if (isCancelled) throw new Error('Upload canceled by user');
+                    const chunkIdx = indices[cursor++];
+                    await uploadOne(chunkIdx);
+                }
+            }
+
+            // Launch UPLOAD_CONCURRENCY workers and race them all to completion
+            const workers = Array.from({ length: Math.min(UPLOAD_CONCURRENCY, indices.length) }, worker);
+            await Promise.all(workers);
+        }
+
+        // ── Shared helper: finalize upload ────────────────────────────────────────
+        async function finalizeUpload(uploadId) {
+            progressText.textContent = 'Finalizing upload (100%)';
+            progressBar.style.width = '100%';
+            chunkListStatus.textContent = 'Assembling chunks into single file...';
+
+            const compResp = await fetch(`/uploads/${uploadId}/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const compData = await compResp.json();
+            if (!compData.success) throw new Error(compData.error?.message || 'Failed to finalize composition');
+        }
+
+        // ── Shared helper: reset upload UI ────────────────────────────────────────
+        function resetUploadUI() {
+            isUploading = false;
+            cancelBtn.style.display = 'none';
+            cancelBtn.disabled = false;
+            progressPanel.style.display = 'none';
+            uploadBtn.disabled = false;
+            uploadBtn.style.display = 'block';
+            fileInput.disabled = false;
+            fileDisplay.style.display = 'none';
+            dropZone.style.display = 'block';
+            resumeSessionBtn.style.display = 'none';
+            startFreshBtn.style.display = 'none';
+            selectedFile = null;
+            currentUploadId = null;
+        }
+
+        // ── Shared helper: clear persisted session ────────────────────────────────
+        function clearStoredSession() {
+            localStorage.removeItem('pipeline-upload-id');
+            localStorage.removeItem('pipeline-upload-filename');
+            localStorage.removeItem('pipeline-upload-size');
+            localStorage.removeItem('pipeline-upload-chunksize');
+            resumeBanner.style.display = 'none';
+        }
+
+        // ── Shared helper: call cancel API and purge S3 ───────────────────────────
+        async function callCancelAPI(uploadId) {
+            try {
+                await fetch(`/uploads/${uploadId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+            } catch(e) {
+                console.error('Cancel API error:', e);
+            }
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            uploadBtn.disabled = true;
+            fileInput.disabled = true;
+            retryBtn.style.display = 'none';
+            cancelBtn.style.display = 'block';
+            isCancelled = false;
+            isUploading = true;
+            fileDisplay.style.display = 'none';
+            progressPanel.style.display = 'block';
+            dashboardPanel.style.display = 'none';
+            uploadCard.classList.add('uploading-glow');
+            chunkListStatus.style.color = 'var(--text-sub)';
+
+            const actualChunkSize = getChunkSize(selectedFile.size);
+            const totalChunks = Math.ceil(selectedFile.size / actualChunkSize);
+            currentChunkSize = actualChunkSize;
+
+            chunkListStatus.textContent = `Chunk size: ${formatBytes(actualChunkSize)} · ${totalChunks} chunks · ${UPLOAD_CONCURRENCY} parallel workers`;
+            progressText.textContent = `0 / ${totalChunks} chunks (0%)`;
+            await new Promise(r => setTimeout(r, 600)); // show config briefly
+
+            try {
+                // 1. Initialize Upload Session
+                chunkListStatus.textContent = 'Initializing upload session...';
+                const initResp = await fetch('/uploads', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: 'web_dashboard',
+                        filename: selectedFile.name,
+                        content_type: selectedFile.type || 'application/octet-stream',
+                        total_size: selectedFile.size,
+                        chunk_size: actualChunkSize
+                    })
+                });
+
+                const initData = await initResp.json();
+                if (!initData.success) throw new Error(initData.error?.message || 'Failed to initialize session');
+
+                const { upload_id, chunk_urls } = initData.data;
+                currentUploadId = upload_id;
+                currentChunkSize = actualChunkSize;
+
+                localStorage.setItem('pipeline-upload-id', upload_id);
+                localStorage.setItem('pipeline-upload-filename', selectedFile.name);
+                localStorage.setItem('pipeline-upload-size', selectedFile.size);
+                localStorage.setItem('pipeline-upload-chunksize', actualChunkSize);
+
+                // 2. Upload all chunks in parallel
+                const allIndices = Array.from({ length: totalChunks }, (_, i) => i);
+                await doChunkUploads(upload_id, chunk_urls, allIndices, totalChunks, actualChunkSize);
+                await finalizeUpload(upload_id);
+
+                isUploading = false;
+                clearStoredSession();
+                showSuccessState(selectedFile?.name || 'file');
+
+                const completedId = currentUploadId;
+                setTimeout(() => startJobMonitoring(completedId), 1000);
+
+            } catch (err) {
+                console.error(err);
+                isUploading = false;
+                if (err.message === 'Upload canceled by user') return;
+                chunkListStatus.textContent = `Error: ${err.message}`;
+                chunkListStatus.style.color = 'var(--danger)';
+                retryBtn.style.display = 'block';
+                cancelBtn.style.display = 'none';
+                uploadBtn.disabled = false;
+                fileInput.disabled = false;
+            }
+        });
+
+        // ── Retry button: re-use resumeSessionBtn logic ────────────────────────────
+        retryBtn.addEventListener('click', () => {
+            retryBtn.style.display = 'none';
+            resumeSessionBtn.click();
+        });
+
+        // ── Resume Session button (same file re-selected after page refresh) ──────
+        resumeSessionBtn.addEventListener('click', async () => {
+            if (!selectedFile || !currentUploadId) return;
+
+            resumeSessionBtn.disabled = true;
+            startFreshBtn.disabled = true;
+            isCancelled = false;
+            isUploading = true;
+            cancelBtn.style.display = 'block';
+            progressPanel.style.display = 'block';
+            chunkListStatus.style.color = 'var(--text-sub)';
+            uploadBadge.className = 'status-badge uploading';
+            uploadBadge.textContent = 'Resuming...';
+
+            try {
+                chunkListStatus.textContent = 'Fetching missing chunks from server...';
+                const resResp = await fetch(`/uploads/${currentUploadId}/resume`);
+                const resData = await resResp.json();
+                if (!resData.success) throw new Error(resData.error?.message || 'Failed to fetch resume info');
+
+                const { missing_chunks, chunk_urls } = resData.data;
+                const totalChunks = Math.ceil(selectedFile.size / currentChunkSize);
+
+                chunkListStatus.textContent = `Resuming \u2014 ${missing_chunks.length} chunk(s) remaining \u00b7 ${UPLOAD_CONCURRENCY} parallel workers`;
+
+                // Build a url lookup keyed by chunk number (resume returns urls indexed by position in missing_chunks)
+                const resumeUrlMap = {};
+                missing_chunks.forEach((chunkNo, idx) => { resumeUrlMap[chunkNo] = chunk_urls[idx]; });
+                const proxyUrls = new Proxy({}, { get: (_, k) => resumeUrlMap[parseInt(k)] });
+
+                // Upload only missing chunks in parallel using the shared pool
+                await doChunkUploads(currentUploadId, proxyUrls, missing_chunks, totalChunks, currentChunkSize);
+                await finalizeUpload(currentUploadId);
+
+                isUploading = false;
+                clearStoredSession();
+                showSuccessState(selectedFile?.name || 'file');
+
+                const completedId = currentUploadId;
+                setTimeout(() => startJobMonitoring(completedId), 1000);
+
+            } catch (err) {
+                console.error(err);
+                isUploading = false;
+                if (err.message === 'Upload canceled by user') return;
+                chunkListStatus.textContent = `Error: ${err.message}`;
+                chunkListStatus.style.color = 'var(--danger)';
+                cancelBtn.style.display = 'none';
+                resumeSessionBtn.disabled = false;
+                startFreshBtn.disabled = false;
+            }
+        });
+
+        // ── Start Fresh button (discard session, restart with same file) ──────────
+        startFreshBtn.addEventListener('click', async () => {
+            if (!confirm('This will cancel the current upload session and delete all uploaded chunks. Start a fresh upload?')) return;
+            const oldId = currentUploadId;
+            clearStoredSession();
+            currentUploadId = null;
+            currentChunkSize = null;
+            dropZone.style.display = 'block';
+            resumeSessionBtn.style.display = 'none';
+            startFreshBtn.style.display = 'none';
+            uploadBtn.style.display = 'block';
+            fileDisplay.style.display = 'none';
+            selectedFile = null;
+            fileInput.value = '';
+            // Tell the API — cleanup worker will purge S3
+            if (oldId) callCancelAPI(oldId);
+        });
+
+        // ── Discard Session button (banner) ───────────────────────────────────────
+        discardSessionBtn.addEventListener('click', async () => {
+            if (!confirm('Discard this incomplete upload session? All uploaded chunks will be permanently deleted from storage.')) return;
+            const oldId = localStorage.getItem('pipeline-upload-id');
+            clearStoredSession();
+            currentUploadId = null;
+            currentChunkSize = null;
+            resumeSessionBtn.style.display = 'none';
+            startFreshBtn.style.display = 'none';
+            uploadBtn.style.display = 'block';
+            dropZone.style.display = 'block';
+            fileDisplay.style.display = 'none';
+            selectedFile = null;
+            fileInput.value = '';
+            if (oldId) {
+                discardSessionBtn.disabled = true;
+                discardSessionBtn.textContent = 'Discarding...';
+                await callCancelAPI(oldId);
+                discardSessionBtn.disabled = false;
+                discardSessionBtn.textContent = 'Discard Session';
+            }
+        });
+
+        // ── Cancel button (during active upload) ──────────────────────────────────
+        cancelBtn.addEventListener('click', async () => {
+            if (!currentUploadId) return;
+            if (!confirm('Cancel this upload? You can resume it later by re-selecting the same file, or discard it entirely.')) return;
+
+            isCancelled = true;
+            isUploading = false;
+            cancelBtn.disabled = true;
+            chunkListStatus.textContent = 'Upload paused. Chunks are preserved — you can resume next time.';
+            chunkListStatus.style.color = 'var(--text-sub)';
+            uploadBadge.className = 'status-badge';
+            uploadBadge.style.background = 'rgba(234, 179, 8, 0.1)';
+            uploadBadge.style.color = 'var(--warning, #f59e0b)';
+            uploadBadge.textContent = 'Paused';
+
+            // NOTE: We do NOT call the cancel API here — chunks remain in S3
+            // so the user can resume. Cleanup only happens on explicit Discard.
+            setTimeout(() => resetUploadUI(), 3000);
+        });
+
+        // Background Job Status Polling
+        async function startJobMonitoring(uploadId) {
+            dashboardPanel.style.display = 'block';
+            jsonViewer.textContent = 'Waiting for worker orchestrator to initialize...';
+
+            let jobId = null;
+            let pollingInterval = null;
+
+            // Poll for the Job ID using the Upload ID first
+            const lookupJob = async () => {
+                try {
+                    const resp = await fetch(`/jobs/upload/${uploadId}`);
+                    const body = await resp.json();
+                    if (body.success && body.data?.job?.id) {
+                        jobId = body.data.job.id;
+                        clearInterval(pollingInterval);
+                        
+                        // Start polling the job status directly now
+                        jobStatusBadge.className = 'status-badge uploading';
+                        jobStatusBadge.textContent = body.data.job.status;
+                        
+                        pollJobStatus(jobId);
+                    }
+                } catch (e) {
+                    console.log('Waiting for job entity to be created...', e);
+                }
+            };
+
+            pollingInterval = setInterval(lookupJob, 1000);
+            await lookupJob();
+        }
+
+        function pollJobStatus(jobId) {
+            const taskCards = {
+                metadata: document.getElementById('task-metadata'),
+                thumbnail: document.getElementById('task-thumbnail'),
+                transcode: document.getElementById('task-transcode')
+            };
+
+            const taskIndicators = {
+                metadata: document.getElementById('task-indicator-metadata'),
+                thumbnail: document.getElementById('task-indicator-thumbnail'),
+                transcode: document.getElementById('task-indicator-transcode')
+            };
+
+            const taskStatusTexts = {
+                metadata: document.getElementById('task-status-metadata'),
+                thumbnail: document.getElementById('task-status-thumbnail'),
+                transcode: document.getElementById('task-status-transcode')
+            };
+
+            const interval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/jobs/${jobId}`);
+                    const body = await resp.json();
+
+                    if (!body.success) return;
+
+                    const job = body.data.job;
+                    const tasks = body.data.tasks || [];
+
+                    // Update main job status badge
+                    jobStatusBadge.textContent = job.status;
+                    if (job.status === 'completed' || job.status === 'finished') {
+                        jobStatusBadge.className = 'status-badge success';
+                        clearInterval(interval);
+                        uploadBtn.disabled = false;
+                        fileInput.disabled = false;
+                    } else if (job.status === 'failed') {
+                        jobStatusBadge.className = 'status-badge';
+                        jobStatusBadge.style.background = 'rgba(239, 68, 68, 0.1)';
+                        jobStatusBadge.style.color = 'var(--danger)';
+                        clearInterval(interval);
+                        uploadBtn.disabled = false;
+                        fileInput.disabled = false;
+                    }
+
+                    // Update task states
+                    let showResults = false;
+                    let metadataResults = {};
+                    let thumbnailURL = null;
+                    let videoURL = null;
+
+                    tasks.forEach(task => {
+                        const kind = task.kind; // 'metadata', 'thumbnail', etc.
+                        const status = task.status; // 'pending', 'processing', 'completed', etc.
+                        const card = taskCards[kind];
+                        const indicator = taskIndicators[kind];
+                        const text = taskStatusTexts[kind];
+
+                        if (!card) return;
+
+                        if (status === 'processing') {
+                            card.className = 'task-card active';
+                            indicator.innerHTML = '<div class="spinner"></div>';
+                            text.textContent = 'Running background processor...';
+                        } else if (status === 'completed') {
+                            card.className = 'task-card completed';
+                            indicator.innerHTML = '<span class="success-icon">✓</span>';
+                            if (task.result) {
+                                try {
+                                    const parsedResult = JSON.parse(atob(task.result)); // Decode base64 bytes if any
+                                    text.textContent = parsedResult.status === 'skipped' ? 'Skipped (Stub)' : 'Processed';
+                                    if (kind === 'metadata') {
+                                        metadataResults = parsedResult;
+                                        showResults = true;
+                                    } else if (kind === 'thumbnail') {
+                                        if (parsedResult.thumbnail_url) {
+                                            thumbnailURL = parsedResult.thumbnail_url;
+                                        }
+                                    } else if (kind === 'transcode') {
+                                        if (parsedResult.video_url) {
+                                            videoURL = parsedResult.video_url;
+                                        }
+                                    }
+                                } catch (e) {
+                                    text.textContent = 'Completed';
+                                }
+                            } else {
+                                text.textContent = 'Completed';
+                            }
+                        } else if (status === 'failed' || status === 'retrying') {
+                            card.className = 'task-card';
+                            card.style.borderColor = 'var(--danger)';
+                            indicator.innerHTML = '<span style="color: var(--danger)">✗</span>';
+                            text.textContent = task.error_msg || 'Failed';
+                        } else {
+                            card.className = 'task-card';
+                            indicator.innerHTML = '<span class="pending-icon">⏳</span>';
+                            text.textContent = 'Queued...';
+                        }
+                    });
+
+                    // Render task results
+                    if (showResults) {
+                        jsonViewer.textContent = JSON.stringify(metadataResults, null, 2);
+                    } else {
+                        jsonViewer.textContent = 'Tasks are executing...';
+                    }
+
+                    // Render showcase
+                    const showcasePanel = document.getElementById('showcase-panel');
+                    const thumbBox = document.getElementById('thumbnail-preview-box');
+                    const videoBox = document.getElementById('video-preview-box');
+                    
+                    let hasMedia = false;
+                    if (thumbnailURL) {
+                        hasMedia = true;
+                        thumbBox.style.display = 'block';
+                        const img = document.getElementById('preview-img');
+                        const fullThumbURL = window.location.origin + thumbnailURL;
+                        if (img.src !== fullThumbURL) {
+                            img.src = thumbnailURL;
+                        }
+                    }
+                    if (videoURL) {
+                        hasMedia = true;
+                        videoBox.style.display = 'block';
+                        const vid = document.getElementById('preview-video');
+                        const fullVideoURL = window.location.origin + videoURL;
+                        if (vid.src !== fullVideoURL) {
+                            vid.src = videoURL;
+                        }
+                    }
+                    if (hasMedia) {
+                        showcasePanel.style.display = 'block';
+                    }
+
+                } catch (err) {
+                    console.error('Error polling job status:', err);
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
